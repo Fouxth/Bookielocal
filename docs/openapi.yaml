@@ -1,0 +1,441 @@
+openapi: 3.0.3
+info:
+  title: BookieLocal API
+  description: Optional backend API for BookieLocal lottery ticket management system
+  version: 1.0.0
+  
+servers:
+  - url: http://localhost:3001/api
+    description: Development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      
+  schemas:
+    Agent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        modifiedAt:
+          type: string
+          format: date-time
+          
+    Entry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum: [3top, 3tod, 3down, 3back, 2top, 2tod, 2down, 2back]
+        raw:
+          type: string
+        expanded:
+          type: array
+          items:
+            type: string
+        unitPrice:
+          type: number
+        quantity:
+          type: integer
+        total:
+          type: number
+          
+    Ticket:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        agentId:
+          type: string
+          format: uuid
+        round:
+          type: string
+        date:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entry'
+        billTotal:
+          type: number
+          
+    Settings:
+      type: object
+      properties:
+        payouts:
+          type: object
+        ceilings:
+          type: object
+        riskyThreshold:
+          type: number
+        storageMode:
+          type: string
+          enum: [Off, PushOnly, TwoWay]
+        mergeDuplicates:
+          type: boolean
+          
+    BlockedNumber:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        category:
+          type: string
+        payoutOverride:
+          type: number
+        enabled:
+          type: boolean
+          
+    Summary:
+      type: object
+      properties:
+        date:
+          type: string
+        round:
+          type: string
+        gross:
+          type: number
+        expectedPayout:
+          type: number
+        profit:
+          type: number
+        ticketCount:
+          type: integer
+        perAgent:
+          type: array
+          items:
+            type: object
+        riskyNumbers:
+          type: array
+          items:
+            type: object
+            
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: string
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: User login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+              required: [username, password]
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                      user:
+                        type: object
+        '401':
+          description: Invalid credentials
+          
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register new user (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                role:
+                  type: string
+                  enum: [admin, user]
+      responses:
+        '201':
+          description: User created
+        '400':
+          description: Username exists
+          
+  /agents:
+    get:
+      tags: [Agents]
+      summary: List all agents
+      responses:
+        '200':
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Agent'
+    post:
+      tags: [Agents]
+      summary: Create agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Agent created
+          
+  /agents/{id}:
+    get:
+      tags: [Agents]
+      summary: Get agent by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Agent details
+        '404':
+          description: Agent not found
+    put:
+      tags: [Agents]
+      summary: Update agent (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Agent updated
+    delete:
+      tags: [Agents]
+      summary: Delete agent (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Agent deleted
+          
+  /tickets:
+    get:
+      tags: [Tickets]
+      summary: List tickets with optional filters
+      parameters:
+        - name: agent
+          in: query
+          schema:
+            type: string
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: round
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of tickets
+    post:
+      tags: [Tickets]
+      summary: Create ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agentId:
+                  type: string
+                round:
+                  type: string
+                date:
+                  type: string
+                entries:
+                  type: array
+                billTotal:
+                  type: number
+      responses:
+        '201':
+          description: Ticket created
+          
+  /tickets/{id}:
+    get:
+      tags: [Tickets]
+      summary: Get ticket by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ticket details
+    put:
+      tags: [Tickets]
+      summary: Update ticket (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ticket updated
+    delete:
+      tags: [Tickets]
+      summary: Delete ticket (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ticket deleted
+          
+  /settings:
+    get:
+      tags: [Settings]
+      summary: Get app settings
+      responses:
+        '200':
+          description: Settings object
+    put:
+      tags: [Settings]
+      summary: Update settings (admin only)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Settings'
+      responses:
+        '200':
+          description: Settings updated
+          
+  /settings/blocked-numbers:
+    get:
+      tags: [Settings]
+      summary: List blocked numbers
+      responses:
+        '200':
+          description: List of blocked numbers
+    post:
+      tags: [Settings]
+      summary: Create blocked number (admin only)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlockedNumber'
+      responses:
+        '201':
+          description: Blocked number created
+          
+  /summary:
+    get:
+      tags: [Summary]
+      summary: Get summary report
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: round
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Summary data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Summary'
