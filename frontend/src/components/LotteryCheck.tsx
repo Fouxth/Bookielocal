@@ -375,63 +375,31 @@ export default function LotteryCheck() {
                     <div>
                         <label className="label">เลขหน้า 3 ตัว</label>
                         <div className="flex gap-2">
-                            <input
-                                type="text"
-                                inputMode="numeric"
-                                value={winningNumbers.front3Digit1}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, '').slice(0, 3);
-                                    setWinningNumbers((prev) => ({ ...prev, front3Digit1: val }));
-                                    setIsCalculated(false);
-                                }}
-                                className="number-input text-center flex-1 text-lg"
-                                placeholder="---"
-                                maxLength={3}
-                            />
-                            <input
-                                type="text"
-                                inputMode="numeric"
-                                value={winningNumbers.front3Digit2}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, '').slice(0, 3);
-                                    setWinningNumbers((prev) => ({ ...prev, front3Digit2: val }));
-                                    setIsCalculated(false);
-                                }}
-                                className="number-input text-center flex-1 text-lg"
-                                placeholder="---"
-                                maxLength={3}
-                            />
+                            <div className="number-input text-center flex-1 text-lg bg-gray-50 dark:bg-slate-700/50 flex items-center justify-center">
+                                <span className="tracking-[0.2em] text-gray-700 dark:text-slate-300 font-mono">
+                                    {winningNumbers.front3Digit1 ? winningNumbers.front3Digit1.split('').join(' ') : 'X X X'}
+                                </span>
+                            </div>
+                            <div className="number-input text-center flex-1 text-lg bg-gray-50 dark:bg-slate-700/50 flex items-center justify-center">
+                                <span className="tracking-[0.2em] text-gray-700 dark:text-slate-300 font-mono">
+                                    {winningNumbers.front3Digit2 ? winningNumbers.front3Digit2.split('').join(' ') : 'X X X'}
+                                </span>
+                            </div>
                         </div>
                     </div>
                     <div>
                         <label className="label">เลขท้าย 3 ตัว</label>
                         <div className="flex gap-2">
-                            <input
-                                type="text"
-                                inputMode="numeric"
-                                value={winningNumbers.back3Digit1}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, '').slice(0, 3);
-                                    setWinningNumbers((prev) => ({ ...prev, back3Digit1: val }));
-                                    setIsCalculated(false);
-                                }}
-                                className="number-input text-center flex-1 text-lg"
-                                placeholder="---"
-                                maxLength={3}
-                            />
-                            <input
-                                type="text"
-                                inputMode="numeric"
-                                value={winningNumbers.back3Digit2}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, '').slice(0, 3);
-                                    setWinningNumbers((prev) => ({ ...prev, back3Digit2: val }));
-                                    setIsCalculated(false);
-                                }}
-                                className="number-input text-center flex-1 text-lg"
-                                placeholder="---"
-                                maxLength={3}
-                            />
+                            <div className="number-input text-center flex-1 text-lg bg-gray-50 dark:bg-slate-700/50 flex items-center justify-center">
+                                <span className="tracking-[0.2em] text-gray-700 dark:text-slate-300 font-mono">
+                                    {winningNumbers.back3Digit1 ? winningNumbers.back3Digit1.split('').join(' ') : 'X X X'}
+                                </span>
+                            </div>
+                            <div className="number-input text-center flex-1 text-lg bg-gray-50 dark:bg-slate-700/50 flex items-center justify-center">
+                                <span className="tracking-[0.2em] text-gray-700 dark:text-slate-300 font-mono">
+                                    {winningNumbers.back3Digit2 ? winningNumbers.back3Digit2.split('').join(' ') : 'X X X'}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -440,19 +408,11 @@ export default function LotteryCheck() {
                 <div className="mb-4 sm:mb-6">
                     <label className="label text-center block">เลขท้าย 2 ตัว</label>
                     <div className="max-w-[120px] sm:max-w-[150px] mx-auto">
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            value={winningNumbers.back2Digit}
-                            onChange={(e) => {
-                                const val = e.target.value.replace(/\D/g, '').slice(0, 2);
-                                setWinningNumbers((prev) => ({ ...prev, back2Digit: val }));
-                                setIsCalculated(false);
-                            }}
-                            className="number-input text-center text-xl sm:text-2xl"
-                            placeholder="--"
-                            maxLength={2}
-                        />
+                        <div className="number-input text-center text-xl sm:text-2xl bg-gray-50 dark:bg-slate-700/50 flex items-center justify-center">
+                            <span className="tracking-[0.3em] text-gray-700 dark:text-slate-300 font-mono font-bold">
+                                {winningNumbers.back2Digit ? winningNumbers.back2Digit.split('').join(' ') : 'X X'}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
