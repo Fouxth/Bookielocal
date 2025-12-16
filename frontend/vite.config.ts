@@ -4,6 +4,9 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 export default defineConfig({
+    define: {
+        'import.meta.env.VITE_APP_VERSION': JSON.stringify(Date.now().toString()),
+    },
     plugins: [
         react(),
         VitePWA({

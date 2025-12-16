@@ -4,6 +4,7 @@ import App from './App';
 import './index.css';
 import { seedDemoData } from './storage/db';
 import { initializeFirebase } from './storage/sync';
+import { checkVersionAndClear } from './utils/versionCheck';
 
 // Initialize Firebase from environment variables (for public pages like /register)
 const firebaseConfig = {
@@ -15,17 +16,26 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Only initialize if config is available
-if (firebaseConfig.apiKey && firebaseConfig.projectId) {
-    initializeFirebase(firebaseConfig);
-    console.log('[Main] Firebase initialized from env variables');
-}
+// Check version and clear site data if needed
+checkVersionAndClear().then((cleared) => {
+    if (cleared) {
+        console.log('[Main] Site data cleared due to version change, reloading...');
+        window.location.reload();
+        return;
+    }
 
-// Seed demo data on first load
-seedDemoData().catch(console.error);
+    // Only initialize if config is available
+    if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+        initializeFirebase(firebaseConfig);
+        console.log('[Main] Firebase initialized from env variables');
+    }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-        <App />
-    </React.StrictMode>
-);
+    // Seed demo data on first load
+    seedDemoData().catch(console.error);
+
+    ReactDOM.createRoot(document.getElementById('root')!).render(
+        <React.StrictMode>
+            <App />
+        </React.StrictMode>
+    );
+});
