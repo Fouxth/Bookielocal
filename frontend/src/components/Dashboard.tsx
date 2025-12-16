@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
 import { computeSummary } from '../lib/compute';
 import { computeActualPayout } from '../lib/payout';
-import { getLotteryResults, getLotteryResultByDate } from '../storage/firebaseData';
+import { getLotteryResults } from '../storage/firebaseData';
 import { formatCurrency, exportSummaryCSV, exportTicketsCSV } from '../utils/export';
 import { CATEGORY_LABELS, LotteryResult } from '@shared/schemas';
 import { getDrawPeriodOptions, getCurrentDrawPeriod, isDateInDrawPeriod } from '../lib/drawPeriod';
