@@ -51,19 +51,26 @@ export default function LotteryCheck() {
         getLotteryResults().then(setSavedResults);
     }, []);
 
-    // Auto-fetch and auto-calculate when period changes
+    // Auto-fetch and auto-calculate when period changes with polling
     useEffect(() => {
-        const loadAndFetchResult = async () => {
+        let pollingInterval: ReturnType<typeof setInterval> | null = null;
+        let isMounted = true;
+
+        const loadAndFetchResult = async (): Promise<boolean> => {
+            if (!isMounted) return true;
+
+            console.log('[Lottery] Starting fetch for period:', selectedPeriod);
             setIsFetching(true);
             setIsCalculated(false);
 
             // First, check if we have saved result in Firebase
             const savedResult = await getLotteryResultByDate(selectedPeriod);
+            console.log('[Lottery] Firebase result:', savedResult);
 
-            if (savedResult && savedResult.firstPrize) {
-                // Use saved result
+            if (savedResult && savedResult.firstPrize && savedResult.firstPrize.length === 6 && /^\d{6}$/.test(savedResult.firstPrize)) {
+                console.log('[Lottery] Using saved result from Firebase');
                 setWinningNumbers({
-                    firstPrize: savedResult.firstPrize || (savedResult.threeTop ? '000' + savedResult.threeTop : ''),
+                    firstPrize: savedResult.firstPrize,
                     front3Digit1: savedResult.threeTod1 || '',
                     front3Digit2: savedResult.threeTod2 || '',
                     back3Digit1: savedResult.threeTod3 || '',
@@ -72,15 +79,17 @@ export default function LotteryCheck() {
                 });
                 setIsCalculated(true);
                 setIsFetching(false);
-                return;
+                return true;
             }
 
-            // No saved result - try to fetch from API
+            // No valid saved result - try to fetch from API
+            console.log('[Lottery] Fetching from API...');
             try {
                 const apiResult = await fetchLotteryResults(selectedPeriod);
+                console.log('[Lottery] API result:', apiResult);
 
-                if (apiResult) {
-                    // Fill form with API result
+                if (apiResult && apiResult.prizeFirst) {
+                    console.log('[Lottery] Got result from API:', apiResult.prizeFirst);
                     setWinningNumbers({
                         firstPrize: apiResult.prizeFirst,
                         front3Digit1: apiResult.threeFront[0] || '',
@@ -105,14 +114,31 @@ export default function LotteryCheck() {
 
                     await createLotteryResult(saveData);
 
-                    // Reload saved results
                     const updatedResults = await getLotteryResults();
-                    setSavedResults(updatedResults);
-
-                    // Auto-calculate
-                    setIsCalculated(true);
+                    if (isMounted) {
+                        setSavedResults(updatedResults);
+                        setIsCalculated(true);
+                        setIsFetching(false);
+                    }
+                    return true;
                 } else {
-                    // No result from API (period not yet drawn)
+                    console.log('[Lottery] No result from API, will retry...');
+                    if (isMounted) {
+                        setWinningNumbers({
+                            firstPrize: '',
+                            front3Digit1: '',
+                            front3Digit2: '',
+                            back3Digit1: '',
+                            back3Digit2: '',
+                            back2Digit: '',
+                        });
+                        setIsFetching(false);
+                    }
+                    return false;
+                }
+            } catch (error) {
+                console.error('[Lottery] Failed to fetch:', error);
+                if (isMounted) {
                     setWinningNumbers({
                         firstPrize: '',
                         front3Digit1: '',
@@ -121,24 +147,35 @@ export default function LotteryCheck() {
                         back3Digit2: '',
                         back2Digit: '',
                     });
+                    setIsFetching(false);
                 }
-            } catch (error) {
-                console.error('Failed to fetch lottery results:', error);
-                // Reset form on error
-                setWinningNumbers({
-                    firstPrize: '',
-                    front3Digit1: '',
-                    front3Digit2: '',
-                    back3Digit1: '',
-                    back3Digit2: '',
-                    back2Digit: '',
-                });
-            } finally {
-                setIsFetching(false);
+                return false;
             }
         };
 
-        loadAndFetchResult();
+        // Initial fetch
+        loadAndFetchResult().then((success) => {
+            if (!success && isMounted) {
+                console.log('[Lottery] Starting polling every 5 seconds...');
+                pollingInterval = setInterval(async () => {
+                    console.log('[Lottery] Polling...');
+                    const gotResult = await loadAndFetchResult();
+                    if (gotResult && pollingInterval) {
+                        console.log('[Lottery] Got result, stopping polling');
+                        clearInterval(pollingInterval);
+                        pollingInterval = null;
+                    }
+                }, 5000);
+            }
+        });
+
+        // Cleanup
+        return () => {
+            isMounted = false;
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+        };
     }, [selectedPeriod]);
 
 
@@ -244,6 +281,8 @@ export default function LotteryCheck() {
     const totalPayout = winners.reduce((sum, w) => sum + w.winAmount, 0);
     const profit = summary.totalGross - totalPayout;
 
+    // Debug: log firstPrize value at render time
+    console.log('[Lottery] Render - firstPrize:', winningNumbers.firstPrize, 'twoTop:', twoTop, 'threeTop:', threeTop);
 
     return (
         <div className="max-w-4xl mx-auto animate-fade-in">
@@ -299,22 +338,32 @@ export default function LotteryCheck() {
                 {/* รางวัลที่ 1 */}
                 <div className="mb-4 sm:mb-6">
                     <label className="label text-base sm:text-lg">รางวัลที่ 1 *</label>
-                    <input
-                        type="text"
-                        inputMode="numeric"
-                        value={winningNumbers.firstPrize}
-                        onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-                            setWinningNumbers((prev) => ({
-                                ...prev,
-                                firstPrize: val,
-                            }));
-                            setIsCalculated(false);
-                        }}
-                        className="number-input text-center text-2xl sm:text-3xl font-bold"
-                        placeholder="000000"
-                        maxLength={6}
-                    />
+                    {winningNumbers.firstPrize ? (
+                        /* แสดงเลขเมื่อมีผลแล้ว */
+                        <div className="number-input text-center text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 flex items-center justify-center">
+                            <span className="tracking-[0.3em] sm:tracking-[0.4em] text-blue-700 dark:text-blue-300">
+                                {winningNumbers.firstPrize.split('').join(' ')}
+                            </span>
+                        </div>
+                    ) : (
+                        /* Input สำหรับกรอกเองเมื่อยังไม่มีผล */
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={winningNumbers.firstPrize}
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                setWinningNumbers((prev) => ({
+                                    ...prev,
+                                    firstPrize: val,
+                                }));
+                                setIsCalculated(false);
+                            }}
+                            className="number-input text-center text-2xl sm:text-3xl font-bold"
+                            placeholder="X X X X X X"
+                            maxLength={6}
+                        />
+                    )}
                     <p className="text-xs text-gray-500 mt-2 text-center">
                         2 ตัวบน: <span className="font-mono font-bold text-blue-600">{twoTop || '--'}</span> |
                         3 ตัวบน: <span className="font-mono font-bold text-blue-600">{threeTop || '---'}</span>

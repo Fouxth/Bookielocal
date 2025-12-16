@@ -70,7 +70,9 @@ export function parseBuddhistDate(buddhistDate: string): string {
 export async function fetchLotteryResults(isoDate: string): Promise<ParsedLotteryResult | null> {
     try {
         const apiDate = formatDateForApi(isoDate);
-        const response = await fetch(`https://lotto.api.rayriffy.com/lotto/${apiDate}`);
+        const response = await fetch(`https://lotto.api.rayriffy.com/lotto/${apiDate}`, {
+            cache: 'no-store'
+        });
 
         if (!response.ok) {
             console.error('Lottery API error:', response.status);
